@@ -26,6 +26,8 @@ const FALLBACK_CONFIDENCE_CAP = 0.6;
 const geminiModel = () => process.env.GEMINI_MODEL || "gemini-3.8-flash";
 // A second Gemini model tried before Groq: newer models sometimes hang under load while older ones answer.
 const geminiBackupModel = () => process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash";
+/** Model for the text-only explanation step (no image). */
+const geminiTextModel = () => process.env.GEMINI_TEXT_MODEL || "gemini-3.5-flash-lite";
 const groqVisionModel = () => process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
 const groqTextModel = () => process.env.GROQ_TEXT_MODEL || groqVisionModel();
 
@@ -246,12 +248,15 @@ type Call = (prompt: string, image: Image | undefined, deadline: number) => Prom
 async function runChain(prompt: string, image?: Image): Promise<ChainResult> {
   const deadline = Date.now() + CHAIN_BUDGET_MS;
   const geminiKey = process.env.GEMINI_API_KEY;
+  // Reading the photo needs the strong model; the text-only explanation step uses a
+  // lighter one, which has higher free-tier limits and saves the main model's quota.
+  const firstModel = image ? geminiModel() : geminiTextModel();
   const all: { name: string; key: string | undefined; primary: boolean; call: Call }[] = [
     {
-      name: geminiModel(),
+      name: firstModel,
       key: geminiKey,
       primary: true,
-      call: (p, i, d) => geminiWithRetry(geminiModel(), p, i, d, PRIMARY_TIMEOUT_MS),
+      call: (p, i, d) => geminiWithRetry(firstModel, p, i, d, PRIMARY_TIMEOUT_MS),
     },
     // Not retried: if this one is down too, move on to Groq quickly.
     {

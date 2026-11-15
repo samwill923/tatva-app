@@ -56,6 +56,7 @@ Open `.env` in the project root and paste in your keys:
 | `GEMINI_API_KEY` | One of the two | Free key from [Google AI Studio](https://aistudio.google.com/apikey) |
 | `GEMINI_MODEL` | No | Gemini model id. Default `gemini-3.8-flash` |
 | `GEMINI_FALLBACK_MODEL` | No | Second Gemini model tried before Groq. Default `gemini-3.5-flash`; set it empty to skip |
+| `GEMINI_TEXT_MODEL` | No | Lighter model for the text-only explanation step. Default `gemini-3.5-flash-lite` (higher free limits) |
 | `GROQ_API_KEY` | One of the two | Free key from [console.groq.com](https://console.groq.com/keys) |
 | `GROQ_MODEL` | No | Groq vision model id. Default `qwen/qwen3.8-27b` |
 | `GROQ_TEXT_MODEL` | No | Groq model for the text-only explanation step. Defaults to `GROQ_MODEL` |
