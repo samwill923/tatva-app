@@ -1,0 +1,6 @@
+# Never upload local secrets or build output; keys go in Vercel's Environment Variables instead.
+.env
+.env.*
+!.env.example
+.next
+node_modules

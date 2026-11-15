@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sage: #4a5d23;
+  --color-sage-dark: #374619;
+  --color-sage-light: #e9eedf;
+  --color-sunset: #e67e22;
+  --color-sunset-dark: #a9550d;
+  --color-sunset-light: #fdf1e4;
+  --color-cream: #f9f8f6;
+  --color-ink: #2a2d22;
+  --color-muted: #686b5d;
+}
+
+@theme inline {
+  --font-sans: var(--font-noto-sans), var(--font-noto-deva), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .btn-primary {
+    @apply flex w-full items-center justify-center gap-2 rounded-2xl bg-sage px-5 py-3.5 text-base font-semibold text-white shadow-sm transition active:scale-[.98] disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply flex w-full items-center justify-center gap-2 rounded-2xl border border-sage/25 bg-white px-5 py-3.5 text-base font-semibold text-sage transition active:scale-[.98] disabled:opacity-50;
+  }
+  .input {
+    @apply w-full rounded-xl border border-sage/20 bg-white px-3 py-2 text-[15px] text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/20;
+  }
+  .input-low {
+    @apply border-sunset bg-sunset-light/60 focus:border-sunset focus:ring-sunset/20;
+  }
+}
+
+/* Laser scan animation shown over the photo while the AI reads it */
+.scan-grid {
+  background-image:
+    linear-gradient(rgb(74 93 35 / 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(74 93 35 / 0.14) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.laser {
+  height: 3px;
+  background: var(--color-sunset);
+  box-shadow:
+    0 0 14px 4px rgb(230 126 34 / 0.75),
+    0 0 40px 10px rgb(230 126 34 / 0.3);
+  animation: laser 2.4s ease-in-out infinite;
+}
+
+.laser::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: 70px;
+  background: linear-gradient(to top, rgb(230 126 34 / 0.22), transparent);
+}
+
+@keyframes laser {
+  0%,
+  100% {
+    top: 0%;
+  }
+  50% {
+    top: calc(100% - 3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laser {
+    animation-duration: 8s;
+  }
+}
