@@ -30,11 +30,11 @@ Confirm screen  ◄── meanwhile POST /api/insights (step 2: explain, text on
 Dashboard
 
 Each step: Gemini models raced with an 8 s stagger (GEMINI_MODELS; first good answer wins)
-        → lighter backup at 36 s (GEMINI_BACKUP_MODEL) → Groq (GROQ_MODEL) at 44 s
+        → lighter backup at 44 s (GEMINI_BACKUP_MODEL). Groq (GROQ_MODEL) only if there is no Gemini key
 ```
 
 - **"Written as".** For every medicine the AI first copies the line exactly as it appears on the paper, and the confirm screen shows it under the name. If the AI decoded it into a different medicine, you can see the mismatch.
-- **Backup readings are flagged.** If both Gemini models are unavailable and Groq does the reading, every field is marked unclear and a banner asks the user to check everything. These results are not cached, so scanning again later can reach Gemini.
+- **Backup readings are flagged.** If the main Gemini models don't answer in time and the lighter backup (Flash-Lite) does the reading, every field is marked unclear and a banner asks the user to check everything. These results are not cached, so scanning again later can reach Gemini.
 - **Two small steps instead of one big one.** Reading the photo and writing the explanations are separate calls. Each answer stays short (Groq's free tier caps output at about 1000 tokens per minute) and the reading step has less room to invent.
 
 - **Caching by image hash.** The browser keeps the last 10 results keyed by the photo's SHA-256, and the server keeps an in-memory cache too, so re-scanning the same photo doesn't call the AI again.
@@ -56,13 +56,13 @@ Open `.env` in the project root and paste in your keys:
 | `GEMINI_API_KEY` | One of the two | Free key from [Google AI Studio](https://aistudio.google.com/apikey) |
 | `GEMINI_MODELS` | No | Comma-separated main models, in order, for both steps. Default `gemini-3.6-flash,gemini-3-flash-preview,gemini-2.5-flash`. If nothing has answered after 8 s the next one is also asked; a "busy" reply hands over at once |
 | `GEMINI_MODEL` | No | Just the first main model (the defaults follow it). Ignored when `GEMINI_MODELS` is set |
-| `GEMINI_BACKUP_MODEL` | No | Faster, less detailed model that joins at 36 s; its readings show the backup banner. Default `gemini-3.5-flash-lite`; set it empty to skip |
+| `GEMINI_BACKUP_MODEL` | No | Faster, less detailed model that joins at 44 s; its readings show the backup banner. Default `gemini-3.5-flash-lite`; set it empty to skip |
 | `GROQ_API_KEY` | One of the two | Free key from [console.groq.com](https://console.groq.com/keys) |
 | `GROQ_MODEL` | No | Groq vision model id. Default `qwen/qwen3.8-27b` |
 | `GROQ_TEXT_MODEL` | No | Groq model for the text-only explanation step. Defaults to `GROQ_MODEL` |
 | `GROQ_MAX_TOKENS` | No | Output cap per Groq call. Default `1000` (the free-tier limit) |
 
-Either key alone works; with both, Groq is the fallback. If a model name is rejected, check the provider's model list and update the variable. No code change is needed.
+Either key alone works. With a Gemini key, Groq isn't used: its free tier cuts real prescriptions off. If a model name is rejected, check the provider's model list and update the variable. No code change is needed.
 
 `.env` is git-ignored. `.env.example` is the committed template.
 
@@ -120,7 +120,7 @@ src/
     Dashboard.tsx         the four Tatvas
     Header.tsx            logo, language toggle, first-run language picker
   lib/
-    ai.ts                 prompts, Gemini retries → Groq fallback chain
+    ai.ts                 prompts, staggered Gemini race → Flash-Lite backup
     normalize.ts          validates/coerces model output
     model.ts              shared types
     i18n.tsx              English/Hindi strings and language context

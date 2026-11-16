@@ -1,4 +1,5 @@
-// AI provider chain: several Gemini models raced with a stagger, then a lighter backup, then Groq.
+// AI provider chain: several Gemini models raced with a stagger, then a lighter Gemini backup.
+// Groq is used only when no Gemini key is set.
 // Server-only: reads API keys from the environment.
 //
 // Work is split in two steps so each answer stays small and focused:
@@ -17,9 +18,9 @@ const MIN_CALL_MS = 4_000;
 // model at a time, the next model is also asked if nothing has answered after this long, and the
 // first good answer wins (the others are cancelled). A model that says "busy" hands over at once.
 const STAGGER_MS = 8_000;
-// The lighter backup (less detail) and Groq only join once the main models have had a fair chance.
-const BACKUP_START_MS = 36_000;
-const GROQ_START_MS = 44_000;
+// The lighter backup (less detail) only joins once the main models have had every chance. It answers
+// in a few seconds, so this still leaves it about 10 s before the deadline.
+const BACKUP_START_MS = 44_000;
 // A model that replied "busy" gets one more try, a little later.
 const BUSY_RETRY_MS = 3_000;
 // Groq's free tier rejects requests that may write more than 1000 output tokens per minute.
@@ -261,7 +262,9 @@ function providerList(): Provider[] {
       list.push({ name: backup, primary: false, startAt: BACKUP_START_MS, call: (p, img, d, c) => gemini(backup, p, img, d, c) });
     }
   }
-  if (process.env.GROQ_API_KEY) list.push({ name: "groq", primary: false, startAt: GROQ_START_MS, call: groq });
+  // Groq only when there is no Gemini key: its free tier cuts real prescriptions off at 1000 tokens,
+  // so as a last step behind Gemini it just used up time without ever answering.
+  if (list.length === 0 && process.env.GROQ_API_KEY) list.push({ name: "groq", primary: false, startAt: 0, call: groq });
   return list;
 }
 
