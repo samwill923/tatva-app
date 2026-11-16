@@ -23,7 +23,8 @@ const GROQ_MAX_TOKENS = () => Number(process.env.GROQ_MAX_TOKENS) || 1000;
 // Readings from the backup model are capped below the "unclear" threshold so everything gets checked.
 const FALLBACK_CONFIDENCE_CAP = 0.6;
 
-const geminiModel = () => process.env.GEMINI_MODEL || "gemini-3.8-flash";
+// 3.6 Flash: same price as 3.8 Flash, but 3.8 was often overloaded (503s and 60 s+ hangs).
+const geminiModel = () => process.env.GEMINI_MODEL || "gemini-3.6-flash";
 // A second Gemini model tried before Groq: newer models sometimes hang under load while older ones answer.
 const geminiBackupModel = () => process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash";
 /** Model for the text-only explanation step (no image). */

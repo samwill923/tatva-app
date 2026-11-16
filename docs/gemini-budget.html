@@ -1,0 +1,126 @@
+<title>Tatva Gemini Budget</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+  /* Layout: one readable column, a recommendation up front, then the working behind each number. */
+  :root {
+    --bg: #F9F8F6; --surface: #FFFFFF; --ink: #1F2614; --muted: #5E6653;
+    --sage: #4A5D23; --sage-soft: #E7ECDD; --sunset: #C9650F; --sunset-soft: #FBEBDC; --line: #DCDFD4;
+    --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Noto Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #141810; --surface: #1C2117; --ink: #E9ECE3; --muted: #A4AC97;
+    --sage: #A9C46E; --sage-soft: #263019; --sunset: #F0A35E; --sunset-soft: #352517; --line: #323A28; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #141810; --surface: #1C2117; --ink: #E9ECE3; --muted: #A4AC97;
+    --sage: #A9C46E; --sage-soft: #263019; --sunset: #F0A35E; --sunset-soft: #352517; --line: #323A28; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); }
+  main { max-width: 760px; margin: 0 auto; padding-block: 40px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 36px; }
+  h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.2; }
+  h1 { font-size: 2rem; } h2 { font-size: 1.3rem; }
+  p { margin: 0; max-width: 65ch; }
+  .eyebrow { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--sage); font-weight: 700; }
+  section { display: grid; gap: 14px; }
+  .lede { color: var(--muted); }
+  .pick { background: var(--sage-soft); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 12px; }
+  .pick strong { color: var(--sage); }
+  .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .fig { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 2px; }
+  .fig b { font-family: var(--display); font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  .fig span { color: var(--muted); font-size: .88rem; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 460px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.n, th.n { text-align: right; }
+  ol, ul { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; max-width: 65ch; }
+  .note { background: var(--sunset-soft); border-left: 3px solid var(--sunset); padding: 12px 14px; border-radius: 6px; }
+  .note b { color: var(--sunset); }
+  .small { font-size: .85rem; color: var(--muted); }
+  a { color: var(--sage); }
+</style>
+
+<main>
+  <header style="display:grid;gap:10px">
+    <p class="eyebrow">Tatva · prescription scanner</p>
+    <h1>Running Tatva on paid Gemini</h1>
+    <p class="lede">What one scan costs, what a month costs, and the cheapest safe way to pay for it. Prices are Google's published rates as of 15 November 2026.</p>
+  </header>
+
+  <section class="pick">
+    <p class="eyebrow">Recommendation</p>
+    <p><strong>Gemini API, paid Tier 1, on Prepay. Load the minimum $5 (about ₹440) credit and leave auto-reload off.</strong></p>
+    <p>For a 4–5 day demo that is more than enough: $5 covers about 330 scans, and even heavy testing uses 30–50 a day. Spending can never go past the $5: at zero balance the app simply stops scanning. There is no contract and no monthly fee.</p>
+  </section>
+
+  <section>
+    <h2>Cost per scan</h2>
+    <div class="figures">
+      <div class="fig"><b>≈ ₹1.3</b><span>per scan until 31 Dec 2026 ($0.015)</span></div>
+      <div class="fig"><b>≈ ₹2.1</b><span>per scan from 1 Jan 2027 ($0.024)</span></div>
+      <div class="fig"><b>₹0</b><span>re-scanning the same photo (cached)</span></div>
+    </div>
+    <p>A scan is two calls. The photo is read by the stronger model, and the explanations are written by a cheaper one.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Step</th><th>Model</th><th class="n">Tokens in / out</th><th class="n">Cost now</th><th class="n">From 2027</th></tr></thead>
+        <tbody>
+          <tr><td>Read the photo</td><td>Gemini 3.8 Flash</td><td class="n">1,850 / ~2,000</td><td class="n">$0.0089</td><td class="n">$0.0178</td></tr>
+          <tr><td>Explain (4 Tatvas, English + Hindi)</td><td>Gemini 3.5 Flash-Lite</td><td class="n">800 / ~2,500</td><td class="n">$0.0065</td><td class="n">$0.0065</td></tr>
+          <tr><th scope="row">Total per scan</th><td></td><td></td><td class="n"><b>$0.015</b></td><td class="n"><b>$0.024</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">Rates per million tokens. 3.8 Flash: $0.75 in, $3.75 out until 31 Dec 2026, then $1.50 and $7.50. 3.5 Flash-Lite: $0.30 in, $2.50 out. Input tokens were measured with Google's token counter on a 1600-pixel photo, the size Tatva sends. Output includes the model's thinking, which is billed. A test read used 918 thinking tokens; the ~2,000 and ~2,500 figures assume a full prescription of about six medicines. Rupees at about ₹88 to the dollar.</p>
+  </section>
+
+  <section>
+    <h2>Cost for the 4–5 day demo</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>How it is used</th><th class="n">Scans in 5 days</th><th class="n">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Light: rehearsal plus the panel demo</td><td class="n">50</td><td class="n">$0.75 · ₹65</td></tr>
+          <tr><td>Normal: the team testing every day</td><td class="n">150</td><td class="n">$2.25 · ₹200</td></tr>
+          <tr><td>Heavy: professors and classmates trying it too</td><td class="n">300</td><td class="n">$4.50 · ₹400</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">All three fit inside the $5 minimum. If the project continues later, a pilot of 2,000 scans a month would cost about $31 (₹2,700) at today's prices.</p>
+  </section>
+
+  <section>
+    <h2>Why paid instead of free</h2>
+    <ul>
+      <li><b>Patient privacy.</b> On the free tier, Google may use what is sent to improve its products. On the paid tier it does not. Prescriptions carry health information, so this alone justifies paying.</li>
+      <li><b>Reliability.</b> During testing the free tier returned "quota exceeded" and "high demand" errors, which forced the app onto a weaker backup model. Paid limits are far higher.</li>
+      <li><b>Cost is small.</b> The whole demo costs less than ₹440.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Setting it up</h2>
+    <ol>
+      <li>In <a href="https://aistudio.google.com" target="_blank" rel="noopener">Google AI Studio</a>, open the project that owns Tatva's key and choose <b>Set up billing</b>.</li>
+      <li>Pick <b>Prepay</b> and buy the minimum, $5.</li>
+      <li>Leave auto-reload off, so the balance is the spending limit.</li>
+      <li>Optionally set a monthly spend cap for the project on the Spend page.</li>
+      <li>Keep the same API key. Nothing in the app or on Vercel needs to change.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Things to know</h2>
+    <div class="note"><b>The $300 Google Cloud free trial does not cover Gemini.</b> Accounts opened after 2 March 2026 cannot spend it on the Gemini API.</div>
+    <ul>
+      <li>Prepaid credit is not refundable, so whatever is left after the demo stays in the account (it expires after 12 months). With $5 that is at most a few hundred rupees.</li>
+      <li>If more scans are needed mid-demo, topping up takes a minute and works straight away.</li>
+      <li>Billing updates about every 10 minutes, so the last few scans before a cap can go slightly over.</li>
+      <li>Limits apply per Google project, not per key. Extra keys in the same project do not add capacity.</li>
+    </ul>
+  </section>
+
+  <p class="small">Sources: Google AI Studio pricing, rate-limits and billing pages, read 15 November 2026. Token counts measured against Tatva's actual prompts.</p>
+</main>
