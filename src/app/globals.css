@@ -1,80 +1,119 @@
 @import "tailwindcss";
 
 @theme {
-  --color-sage: #4a5d23;
-  --color-sage-dark: #374619;
-  --color-sage-light: #e9eedf;
-  --color-sunset: #e67e22;
-  --color-sunset-dark: #a9550d;
-  --color-sunset-light: #fdf1e4;
-  --color-cream: #f9f8f6;
-  --color-ink: #2a2d22;
-  --color-muted: #686b5d;
+  /* Pastel sage: soft fills, with deeper greens kept only for readable text. */
+  --color-sage: #4f7a5a;
+  --color-sage-dark: #2b4634;
+  --color-sage-light: #e4efe1;
+  --color-pastel: #b9d6b6;
+  --color-pastel-deep: #a6c9a3;
+  --color-sunset: #e8914a;
+  --color-sunset-dark: #9a4f12;
+  --color-sunset-light: #fcede0;
+  --color-peach: #f7d2b3;
+  --color-cream: #f5f3ee;
+  --color-ink: #23271f;
+  --color-muted: #5f6659;
 }
 
 @theme inline {
   --font-sans: var(--font-noto-sans), var(--font-noto-deva), system-ui, sans-serif;
+  --font-display: var(--font-manrope), var(--font-noto-deva), system-ui, sans-serif;
 }
 
 body {
+  position: relative;
   background: var(--color-cream);
   color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Soft, blurred colour patches behind everything, so the glass has something to show. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 30rem at -10% -8%, rgb(200 226 196 / 0.85), transparent 60%),
+    radial-gradient(26rem 24rem at 110% 45%, rgb(248 214 188 / 0.7), transparent 60%),
+    radial-gradient(34rem 28rem at 10% 112%, rgb(190 218 196 / 0.75), transparent 60%);
+}
+
 @layer components {
+  .glass {
+    @apply border border-white/80 bg-white/55 shadow-[0_10px_28px_rgb(43_70_52_/_0.07)] backdrop-blur-xl;
+  }
+  .glass-strong {
+    @apply border border-white/90 bg-white/65 shadow-[0_10px_28px_rgb(43_70_52_/_0.07)] backdrop-blur-xl;
+  }
   .btn-primary {
-    @apply flex w-full items-center justify-center gap-2 rounded-2xl bg-sage px-5 py-3.5 text-base font-semibold text-white shadow-sm transition active:scale-[.98] disabled:opacity-50;
+    @apply flex w-full items-center justify-center gap-2 rounded-2xl bg-pastel px-5 py-3.5 text-base font-semibold text-sage-dark shadow-[0_8px_20px_rgb(79_122_90_/_0.18)] transition hover:bg-pastel-deep active:scale-[.98] disabled:opacity-50;
+  }
+  .btn-warm {
+    @apply bg-peach text-sunset-dark shadow-[0_8px_20px_rgb(232_145_74_/_0.18)] hover:bg-[#f3c49e];
   }
   .btn-secondary {
-    @apply flex w-full items-center justify-center gap-2 rounded-2xl border border-sage/25 bg-white px-5 py-3.5 text-base font-semibold text-sage transition active:scale-[.98] disabled:opacity-50;
+    @apply flex w-full items-center justify-center gap-2 rounded-2xl border border-white/90 bg-white/60 px-5 py-3.5 text-base font-semibold text-sage-dark backdrop-blur-xl transition active:scale-[.98] disabled:opacity-50;
   }
   .input {
-    @apply w-full rounded-xl border border-sage/20 bg-white px-3 py-2 text-[15px] text-ink outline-none transition focus:border-sage focus:ring-2 focus:ring-sage/20;
+    @apply w-full rounded-xl border border-sage/15 bg-white/80 px-3 py-2 text-[15px] text-ink outline-none transition focus:border-sage/50 focus:ring-2 focus:ring-pastel/60;
   }
   .input-low {
-    @apply border-sunset bg-sunset-light/60 focus:border-sunset focus:ring-sunset/20;
+    @apply border-sunset/60 bg-sunset-light/80 focus:border-sunset focus:ring-peach/60;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/90 bg-white/60 px-3 py-1 text-xs font-medium text-sage-dark backdrop-blur-xl;
   }
 }
 
-/* Laser scan animation shown over the photo while the AI reads it */
-.scan-grid {
-  background-image:
-    linear-gradient(rgb(74 93 35 / 0.14) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(74 93 35 / 0.14) 1px, transparent 1px);
-  background-size: 22px 22px;
+/* Viewfinder corners on the camera area */
+.viewfinder::before,
+.viewfinder::after,
+.viewfinder > .vf-b::before,
+.viewfinder > .vf-b::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-color: var(--color-sage);
+  opacity: 0.55;
+  pointer-events: none;
 }
+.viewfinder::before { top: 16px; left: 16px; border-top: 2.5px solid; border-left: 2.5px solid; border-top-left-radius: 14px; }
+.viewfinder::after { top: 16px; right: 16px; border-top: 2.5px solid; border-right: 2.5px solid; border-top-right-radius: 14px; }
+.viewfinder > .vf-b::before { bottom: 16px; left: 16px; border-bottom: 2.5px solid; border-left: 2.5px solid; border-bottom-left-radius: 14px; }
+.viewfinder > .vf-b::after { bottom: 16px; right: 16px; border-bottom: 2.5px solid; border-right: 2.5px solid; border-bottom-right-radius: 14px; }
 
-.laser {
-  height: 3px;
-  background: var(--color-sunset);
-  box-shadow:
-    0 0 14px 4px rgb(230 126 34 / 0.75),
-    0 0 40px 10px rgb(230 126 34 / 0.3);
-  animation: laser 2.4s ease-in-out infinite;
+/* Calm sweep over the photo while the AI reads it */
+.sweep {
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(79 122 90 / 0.7);
+  animation: sweep 2.8s ease-in-out infinite;
 }
-
-.laser::after {
+.sweep::after {
   content: "";
   position: absolute;
   inset-inline: 0;
   bottom: 100%;
-  height: 70px;
-  background: linear-gradient(to top, rgb(230 126 34 / 0.22), transparent);
+  height: 56px;
+  background: linear-gradient(to top, rgb(185 214 182 / 0.45), transparent);
 }
 
-@keyframes laser {
+@keyframes sweep {
   0%,
   100% {
-    top: 0%;
+    top: 4%;
   }
   50% {
-    top: calc(100% - 3px);
+    top: 94%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .laser {
-    animation-duration: 8s;
+  .sweep {
+    animation-duration: 9s;
   }
 }

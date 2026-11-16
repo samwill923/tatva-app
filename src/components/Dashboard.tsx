@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useLang, type Key } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 import { MED_FIELDS, SLOTS, isLow, type Bi, type Medicine, type ScanResult, type Severity, type Slot } from "@/lib/model";
-import { Alert, Bowl, Check, Cross, Pill, Pulse, Sun } from "./icons";
+import { Alert, Bowl, Check, Cross, List, Moon, Pill, Pulse, Sun, Sunrise, Sunset } from "./icons";
 import { Card, SectionTitle, UnclearBadge } from "./ui";
 
 type Tab = "nidana" | "aushadhi" | "aahara" | "vihara";
@@ -15,7 +15,11 @@ const TABS: { id: Tab; icon: (p: { className?: string }) => ReactNode }[] = [
   { id: "vihara", icon: Sun },
 ];
 
-const SLOT_EMOJI: Record<Slot, string> = { morning: "🌅", afternoon: "☀️", evening: "🌇", night: "🌙" };
+type IconT = (p: { className?: string }) => ReactNode;
+const SLOT_ICON: Record<Slot, IconT> = { morning: Sunrise, afternoon: Sun, evening: Sunset, night: Moon };
+
+/** Alternating chip colours so each medicine is easy to follow across the day. */
+const MED_TINTS = ["bg-sage-light text-sage-dark", "bg-sunset-light text-sunset-dark", "bg-[#e6eef0] text-[#2f4a52]"];
 
 const SEVERITY_STYLE: Record<Severity, string> = {
   low: "bg-sage-light text-sage-dark",
@@ -46,7 +50,7 @@ export function Dashboard({ result, onEdit, onNewScan }: Props) {
     <section>
       <VerifyNote warnings={result.warnings} />
 
-      <div role="tablist" className="mt-4 grid grid-cols-2 gap-3">
+      <div role="tablist" className="glass sticky top-[76px] z-10 mt-4 grid grid-cols-4 gap-1 rounded-[22px] p-1">
         {TABS.map(({ id, icon: Icon }) => {
           const active = tab === id;
           return (
@@ -56,24 +60,22 @@ export function Dashboard({ result, onEdit, onNewScan }: Props) {
               type="button"
               aria-selected={active}
               onClick={() => setTab(id)}
-              className={`relative rounded-2xl p-4 text-left transition active:scale-[.98] ${
-                active ? "bg-sage text-white shadow-md" : "border border-sage/10 bg-white text-ink shadow-sm"
+              className={`relative flex flex-col items-center gap-0.5 rounded-[18px] px-1 py-2.5 transition active:scale-[.97] ${
+                active ? "bg-pastel text-sage-dark shadow-[0_6px_14px_rgb(79_122_90_/_0.2)]" : "text-ink/75 hover:bg-white/50"
               }`}
             >
               {flagged[id] && (
-                <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-sunset ring-2 ring-white" aria-hidden />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-sunset ring-2 ring-white" aria-hidden />
               )}
-              <Icon className={`h-6 w-6 ${active ? "text-white" : "text-sage"}`} />
-              <p className="mt-2 text-lg font-bold leading-tight">{t(id)}</p>
-              <p className={`text-xs ${active ? "text-white/80" : "text-muted"}`}>
-                {t(`${id}Sub` as Key)} · {counts[id]}
-              </p>
+              <Icon className={`h-5 w-5 ${active ? "" : "text-sage"}`} />
+              <span className="text-[13px] font-semibold leading-tight">{t(id)}</span>
+              <span className={`text-[10.5px] leading-tight ${active ? "text-sage-dark/75" : "text-muted"}`}>{counts[id]}</span>
             </button>
           );
         })}
       </div>
 
-      <div role="tabpanel" className="mt-6">
+      <div role="tabpanel" className="mt-5">
         {tab === "nidana" && <Nidana result={result} />}
         {tab === "aushadhi" && <Aushadhi medicines={result.medicines} />}
         {tab === "aahara" && <Aahara result={result} />}
@@ -95,7 +97,7 @@ export function Dashboard({ result, onEdit, onNewScan }: Props) {
 function VerifyNote({ warnings }: { warnings: Bi[] }) {
   const { t, tx } = useLang();
   return (
-    <div className="rounded-2xl border border-sunset/30 bg-sunset-light p-4">
+    <div className="rounded-3xl border border-sunset/25 bg-sunset-light/80 p-4 backdrop-blur-xl">
       <p className="flex items-center gap-2 font-bold text-sunset-dark">
         <Alert className="h-5 w-5" /> {t("verifyTitle")}
       </p>
@@ -113,7 +115,7 @@ function VerifyNote({ warnings }: { warnings: Bi[] }) {
 
 function Empty() {
   const { t } = useLang();
-  return <p className="rounded-2xl bg-white p-4 text-sm text-muted">{t("nothingHere")}</p>;
+  return <p className="glass rounded-3xl p-4 text-sm text-muted">{t("nothingHere")}</p>;
 }
 
 function Nidana({ result }: { result: ScanResult }) {
@@ -153,11 +155,11 @@ function Aushadhi({ medicines }: { medicines: Medicine[] }) {
   return (
     <>
       <SectionTitle>{t("dailySchedule")}</SectionTitle>
-      <Card className="divide-y divide-sage/10 p-0">
+      <Card className="divide-y divide-sage/10 px-4 py-1">
         {groups.map(({ slot, meds }) => (
-          <ScheduleRow key={slot} emoji={SLOT_EMOJI[slot]} label={t(`slot_${slot}`)} meds={meds} />
+          <ScheduleRow key={slot} icon={SLOT_ICON[slot]} label={t(`slot_${slot}`)} meds={meds} all={medicines} />
         ))}
-        {asDirected.length > 0 && <ScheduleRow emoji="📋" label={t("asDirected")} meds={asDirected} />}
+        {asDirected.length > 0 && <ScheduleRow icon={List} label={t("asDirected")} meds={asDirected} all={medicines} />}
       </Card>
 
       <SectionTitle>{t("yourMedicines")}</SectionTitle>
@@ -170,26 +172,27 @@ function Aushadhi({ medicines }: { medicines: Medicine[] }) {
   );
 }
 
-function ScheduleRow({ emoji, label, meds }: { emoji: string; label: string; meds: Medicine[] }) {
+function ScheduleRow({ icon: Icon, label, meds, all }: { icon: IconT; label: string; meds: Medicine[]; all: Medicine[] }) {
   const { t } = useLang();
   return (
-    <div className="flex gap-3 p-4">
-      <span className="text-2xl" aria-hidden>
-        {emoji}
+    <div className="flex gap-3 py-3">
+      <span className="flex w-24 shrink-0 items-center gap-2 self-start pt-1 text-sm font-semibold text-sage">
+        <Icon className="h-4 w-4 shrink-0" />
+        {label}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-bold text-ink">{label}</p>
-        <ul className="mt-1 space-y-1">
-          {meds.map((m) => (
-            <li key={m.id} className="text-sm text-ink/80">
-              <span className="font-semibold text-sage">{m.name}</span>
-              {m.strength && ` ${m.strength}`}
-              {m.dose && ` · ${m.dose}`}
-              {m.food !== "unknown" && <span className="text-muted"> · {t(`food_${m.food}`)}</span>}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <ul className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+        {meds.map((m) => (
+          <li
+            key={m.id}
+            className={`rounded-xl px-2.5 py-1 text-[12.5px] font-semibold ${MED_TINTS[all.indexOf(m) % MED_TINTS.length]}`}
+          >
+            {m.name}
+            {m.strength && ` ${m.strength}`}
+            {m.dose && <span className="font-normal"> · {m.dose}</span>}
+            {m.food !== "unknown" && <span className="font-normal opacity-80"> · {t(`food_${m.food}`)}</span>}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -208,7 +211,7 @@ function MedicineCard({ m }: { m: Medicine }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-lg font-bold leading-tight text-ink">
+          <p className="font-display text-lg font-extrabold leading-tight text-ink">
             {m.name} {m.strength && <span className="font-semibold text-sage">{m.strength}</span>}
           </p>
           {m.generic && (
@@ -226,7 +229,7 @@ function MedicineCard({ m }: { m: Medicine }) {
       )}
 
       {m.description.en && (
-        <div className="mt-3 rounded-xl bg-sage-light/70 p-3">
+        <div className="mt-3 rounded-2xl bg-sage-light/75 p-3">
           <p className="text-[11px] font-bold uppercase tracking-wide text-sage">{t("whatFor")}</p>
           <p className="mt-0.5 text-sm text-ink">{tx(m.description)}</p>
         </div>
@@ -239,7 +242,7 @@ function MedicineCard({ m }: { m: Medicine }) {
               <dt className="text-xs text-muted">{d.label}</dt>
               <dd className={d.low ? "font-semibold text-sunset-dark" : "text-ink"}>
                 {d.value || "—"}
-                {d.low && <span className="ml-1 text-[11px]">⚠ {t("unclear")}</span>}
+                {d.low && <span className="ml-1 text-[11px]">({t("unclear")})</span>}
               </dd>
             </div>
           ))}
@@ -292,7 +295,7 @@ function BiList({ items, title, icon }: { items: Bi[]; title: string; icon?: Rea
           <ul className="divide-y divide-sage/10">
             {items.map((item, i) => (
               <li key={i} className="flex gap-3 px-4 py-3 text-sm text-ink">
-                <span className="mt-0.5 shrink-0">{icon ?? <span className="block h-2 w-2 translate-y-1.5 rounded-full bg-sage" />}</span>
+                <span className="mt-0.5 shrink-0">{icon ?? <span className="block h-2 w-2 translate-y-1.5 rounded-full bg-pastel-deep" />}</span>
                 <span>{tx(item)}</span>
               </li>
             ))}

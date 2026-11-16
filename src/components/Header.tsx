@@ -12,12 +12,12 @@ const LANGS: { id: Lang; label: string }[] = [
 export function Header() {
   const { lang, setLang, t } = useLang();
   return (
-    <header className="sticky top-0 z-20 border-b border-sage/10 bg-cream/90 backdrop-blur">
-      <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-20 px-3 pt-3">
+      <div className="glass mx-auto flex max-w-xl items-center justify-between rounded-[22px] px-3 py-2.5">
         <div className="flex items-center gap-2.5">
           <Logo className="h-10 w-10" />
           <div>
-            <p className="text-xl font-bold leading-none tracking-tight text-sage">Tatva</p>
+            <p className="font-display text-xl font-extrabold leading-none tracking-tight text-sage-dark">Tatva</p>
             <p className="mt-0.5 text-xs text-muted">{t("tagline")}</p>
           </div>
         </div>
@@ -28,7 +28,7 @@ export function Header() {
               type="button"
               onClick={() => setLang(l.id)}
               aria-pressed={lang === l.id}
-              className={`rounded-full px-3 py-1 transition ${lang === l.id ? "bg-sage text-white shadow-sm" : "text-sage"}`}
+              className={`rounded-full px-3 py-1 transition ${lang === l.id ? "bg-pastel text-sage-dark shadow-sm" : "text-sage"}`}
             >
               {l.label}
             </button>
@@ -42,10 +42,10 @@ export function Header() {
 export function LanguagePicker() {
   const { setLang } = useLang();
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 sm:items-center" role="dialog" aria-modal>
-      <div className="w-full max-w-sm rounded-3xl bg-cream p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/25 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal>
+      <div className="w-full max-w-sm rounded-[28px] border border-white/90 bg-white/75 p-6 shadow-[0_20px_50px_rgb(43_70_52_/_0.15)] backdrop-blur-2xl">
         <FullLogo className="mx-auto h-36 w-auto rounded-2xl" />
-        <h2 className="mt-4 text-center text-xl font-bold text-ink">
+        <h2 className="mt-4 text-center font-display text-xl font-extrabold text-ink">
           Choose your language
           <span className="mt-1 block text-lg">अपनी भाषा चुनें</span>
         </h2>
@@ -53,14 +53,14 @@ export function LanguagePicker() {
           <button
             type="button"
             onClick={() => setLang("en")}
-            className="rounded-2xl bg-sage px-4 py-4 text-lg font-semibold text-white transition active:scale-[.98]"
+            className="btn-primary py-4 text-lg"
           >
             English
           </button>
           <button
             type="button"
             onClick={() => setLang("hi")}
-            className="rounded-2xl bg-sunset px-4 py-4 text-lg font-semibold text-white transition active:scale-[.98]"
+            className="btn-primary btn-warm py-4 text-lg"
           >
             हिन्दी
           </button>

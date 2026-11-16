@@ -50,15 +50,15 @@ export function ConfirmScreen({ medicines, fallback, busy, error, onChange, onCo
       ),
     );
 
-  const unclearCount =medicines.reduce((n, m) => n + MED_FIELDS.filter((f) => isLow(m.confidence[f])).length, 0);
+  const unclearCount = medicines.reduce((n, m) => n + MED_FIELDS.filter((f) => isLow(m.confidence[f])).length, 0);
   const canContinue = medicines.some((m) => m.name.trim());
 
   return (
     <section>
-      <h1 className="text-2xl font-bold text-ink">{t("confirmTitle")}</h1>
-      <p className="mt-1 text-sm text-muted">{t("confirmSub")}</p>
+      <h1 className="px-1 font-display text-[26px] font-extrabold leading-tight tracking-tight text-ink">{t("confirmTitle")}</h1>
+      <p className="mt-1 px-1 text-sm text-muted">{t("confirmSub")}</p>
       {fallback && (
-        <div role="alert" className="mt-4 rounded-2xl border border-sunset/40 bg-sunset-light p-4">
+        <div role="alert" className="mt-4 rounded-3xl border border-sunset/30 bg-sunset-light/85 p-4 backdrop-blur-xl">
           <p className="flex items-center gap-2 font-bold text-sunset-dark">
             <Alert className="h-5 w-5" /> {t("backupTitle")}
           </p>
@@ -66,18 +66,19 @@ export function ConfirmScreen({ medicines, fallback, busy, error, onChange, onCo
         </div>
       )}
       {unclearCount > 0 && (
-        <p className="mt-3 inline-block rounded-full bg-sunset-light px-3 py-1 text-xs font-semibold text-sunset-dark">
+        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-sunset/25 bg-sunset-light/85 px-3 py-1 text-xs font-semibold text-sunset-dark">
+          <Alert className="h-3.5 w-3.5" />
           {unclearCount} {t("needsCheck")}
         </p>
       )}
 
       <fieldset disabled={busy} className="mt-5 grid gap-4">
-        {medicines.length === 0 && <p className="rounded-2xl bg-white p-4 text-sm text-muted">{t("noMedicines")}</p>}
+        {medicines.length === 0 && <p className="glass rounded-3xl p-4 text-sm text-muted">{t("noMedicines")}</p>}
 
         {medicines.map((m, i) => (
-          <div key={m.id} className="rounded-2xl border border-sage/10 bg-white p-4 shadow-sm">
+          <div key={m.id} className="glass-strong rounded-3xl p-4">
             <div className="flex items-end gap-2">
-              <span className="mb-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage text-sm font-bold text-white">
+              <span className="mb-2.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pastel text-sm font-bold text-sage-dark">
                 {i + 1}
               </span>
               <Field
@@ -98,7 +99,7 @@ export function ConfirmScreen({ medicines, fallback, busy, error, onChange, onCo
               </button>
             </div>
             {m.writtenAs && (
-              <p className="ml-9 mt-2 rounded-lg bg-cream px-2.5 py-1.5 text-xs text-muted">
+              <p className="ml-9 mt-2 rounded-lg bg-white/60 px-2.5 py-1.5 text-xs text-muted">
                 {t("writtenAs")}: <span className="font-mono text-ink">{m.writtenAs}</span>
               </p>
             )}
@@ -149,7 +150,7 @@ export function ConfirmScreen({ medicines, fallback, busy, error, onChange, onCo
         <button
           type="button"
           onClick={() => onChange([...medicines, blankMedicine()])}
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-sage/30 py-3 font-semibold text-sage transition hover:bg-sage-light/60"
+          className="flex items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-sage/25 bg-white/30 py-3 font-semibold text-sage transition hover:bg-white/55"
         >
           <Plus className="h-5 w-5" /> {t("addMedicine")}
         </button>
@@ -157,7 +158,7 @@ export function ConfirmScreen({ medicines, fallback, busy, error, onChange, onCo
 
       {error && <ErrorBanner className="mt-4">{error}</ErrorBanner>}
 
-      <div className="sticky bottom-0 -mx-4 mt-6 grid gap-2 bg-gradient-to-t from-cream via-cream to-transparent px-4 pb-4 pt-6">
+      <div className="sticky bottom-0 -mx-4 mt-6 grid gap-2 bg-gradient-to-t from-cream via-cream/90 to-transparent px-4 pb-4 pt-6">
         <button type="button" onClick={onConfirm} disabled={busy || !canContinue} className="btn-primary">
           {busy ? (
             <>

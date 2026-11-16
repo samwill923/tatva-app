@@ -3,7 +3,7 @@ import { Alert } from "./icons";
 
 export function ErrorBanner({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div role="alert" className={`flex items-start gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800 ${className}`}>
+    <div role="alert" className={`flex items-start gap-2 rounded-2xl border border-red-200/70 bg-red-50/85 px-4 py-3 text-sm text-red-800 ${className}`}>
       <Alert className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{children}</span>
     </div>
@@ -20,9 +20,9 @@ export function UnclearBadge({ label }: { label: string }) {
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-sage/10 bg-white p-4 shadow-sm ${className}`}>{children}</div>;
+  return <div className={`glass-strong rounded-3xl p-4 ${className}`}>{children}</div>;
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {
-  return <h3 className="mb-2 mt-6 text-sm font-bold uppercase tracking-wide text-sage first:mt-0">{children}</h3>;
+  return <h3 className="mb-2.5 mt-7 px-1 font-display text-base font-extrabold text-sage-dark first:mt-0">{children}</h3>;
 }

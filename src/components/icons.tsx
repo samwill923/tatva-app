@@ -103,3 +103,41 @@ export const Sun = (p: P) => (
     <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
   </svg>
 );
+
+export const Lock = (p: P) => (
+  <svg {...base} {...p}>
+    <rect x="5" y="11" width="14" height="9" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+  </svg>
+);
+
+export const Info = (p: P) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5M12 8h.01" />
+  </svg>
+);
+
+export const Sunrise = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M17 18a5 5 0 0 0-10 0M3 18h18M12 2v6M8 6l4-4 4 4M4.2 10.2l1.4 1.4M18.4 11.6l1.4-1.4" />
+  </svg>
+);
+
+export const Sunset = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M17 18a5 5 0 0 0-10 0M3 18h18M12 9V3M8 6l4 4 4-4M4.2 10.2l1.4 1.4M18.4 11.6l1.4-1.4" />
+  </svg>
+);
+
+export const Moon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+  </svg>
+);
+
+export const List = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+  </svg>
+);
