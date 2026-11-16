@@ -1,4 +1,4 @@
-// AI provider chain: Gemini first (retried when busy), Groq as fallback.
+// AI provider chain: several Gemini models raced with a stagger, then a lighter backup, then Groq.
 // Server-only: reads API keys from the environment.
 //
 // Work is split in two steps so each answer stays small and focused:
@@ -11,24 +11,33 @@ import { MED_FIELDS, type EditableMedicine, type ScanResult } from "./model";
 
 // The whole chain must finish inside the API route's 60 s limit (maxDuration).
 const CHAIN_BUDGET_MS = 55_000;
-// Per-call ceilings, so one hanging model can't use up the whole budget.
-const PRIMARY_TIMEOUT_MS = 20_000;
-const BACKUP_TIMEOUT_MS = 18_000;
 // Don't start a call with less time than this left.
 const MIN_CALL_MS = 4_000;
-// Gemini "high demand" (503) and rate-limit (429) errors are usually brief.
-const GEMINI_RETRY_DELAYS_MS = [1500, 4000];
+// Under heavy demand a Flash model can take 30 s+ to answer, or hang. Rather than waiting on one
+// model at a time, the next model is also asked if nothing has answered after this long, and the
+// first good answer wins (the others are cancelled). A model that says "busy" hands over at once.
+const STAGGER_MS = 8_000;
+// The lighter backup (less detail) and Groq only join once the main models have had a fair chance.
+const BACKUP_START_MS = 36_000;
+const GROQ_START_MS = 44_000;
+// A model that replied "busy" gets one more try, a little later.
+const BUSY_RETRY_MS = 3_000;
 // Groq's free tier rejects requests that may write more than 1000 output tokens per minute.
 const GROQ_MAX_TOKENS = () => Number(process.env.GROQ_MAX_TOKENS) || 1000;
-// Readings from the backup model are capped below the "unclear" threshold so everything gets checked.
+// Readings from a backup model are capped below the "unclear" threshold so everything gets checked.
 const FALLBACK_CONFIDENCE_CAP = 0.6;
 
-// 3.6 Flash: same price as 3.8 Flash, but 3.8 was often overloaded (503s and 60 s+ hangs).
-const geminiModel = () => process.env.GEMINI_MODEL || "gemini-3.6-flash";
-// A second Gemini model tried before Groq: newer models sometimes hang under load while older ones answer.
-const geminiBackupModel = () => process.env.GEMINI_FALLBACK_MODEL ?? "gemini-3.5-flash";
-/** Model for the text-only explanation step (no image). */
-const geminiTextModel = () => process.env.GEMINI_TEXT_MODEL || "gemini-3.5-flash-lite";
+// Main models, in order. Same set for reading the photo and for the explanations.
+// 3.8 Flash is left out: it was often overloaded (503s and 60 s+ hangs).
+const DEFAULT_GEMINI_MODELS = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-2.5-flash"];
+function geminiModels(): string[] {
+  const list = (process.env.GEMINI_MODELS ?? "").split(",").map((m) => m.trim()).filter(Boolean);
+  if (list.length > 0) return list;
+  const first = process.env.GEMINI_MODEL?.trim();
+  return first ? [first, ...DEFAULT_GEMINI_MODELS.filter((m) => m !== first)] : DEFAULT_GEMINI_MODELS;
+}
+/** Fast but less detailed; its readings show the backup banner. Set to "" to turn off. */
+const geminiBackupModel = () => (process.env.GEMINI_BACKUP_MODEL ?? "gemini-3.5-flash-lite").trim();
 const groqVisionModel = () => process.env.GROQ_MODEL || "qwen/qwen3.8-27b";
 const groqTextModel = () => process.env.GROQ_TEXT_MODEL || groqVisionModel();
 
@@ -54,11 +63,11 @@ class ProviderError extends Error {
 
 type Image = { base64: string; mime: string };
 
-/** Abort signal for a call: its own ceiling or the chain deadline, whichever comes first. */
-function callSignal(deadline: number, ceilingMs: number) {
+/** Abort signal for a call: the chain deadline, or the race being won by another model. */
+function callSignal(deadline: number, cancel: AbortSignal) {
   const left = deadline - Date.now();
   if (left < MIN_CALL_MS) throw new ProviderError(504, "Out of time for another attempt");
-  return AbortSignal.timeout(Math.min(ceilingMs, left));
+  return AbortSignal.any([cancel, AbortSignal.timeout(left)]);
 }
 
 const SHORTHAND = `Shorthand:
@@ -136,16 +145,14 @@ Return ONLY compact JSON (no indentation) in this shape:
 }`;
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 async function gemini(
   model: string,
   prompt: string,
   image: Image | undefined,
   deadline: number,
-  ceilingMs: number,
+  cancel: AbortSignal,
 ): Promise<string> {
-  const signal = callSignal(deadline, ceilingMs);
+  const signal = callSignal(deadline, cancel);
   const parts: object[] = [{ text: prompt }];
   if (image) parts.push({ inline_data: { mime_type: image.mime, data: image.base64 } });
 
@@ -176,29 +183,8 @@ async function gemini(
   return text;
 }
 
-async function geminiWithRetry(
-  model: string,
-  prompt: string,
-  image: Image | undefined,
-  deadline: number,
-  ceilingMs: number,
-): Promise<string> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await gemini(model, prompt, image, deadline, ceilingMs);
-    } catch (e) {
-      const busy = e instanceof ProviderError && [429, 500, 503].includes(e.status);
-      const delay = GEMINI_RETRY_DELAYS_MS[attempt];
-      // Leave room for the fallback models rather than spending the budget on retries.
-      if (!busy || delay === undefined || deadline - Date.now() < delay + 2 * PRIMARY_TIMEOUT_MS) throw e;
-      console.warn(`[tatva] ${model} busy (${(e as ProviderError).status}), retrying in ${delay}ms`);
-      await sleep(delay);
-    }
-  }
-}
-
-async function groq(prompt: string, image: Image | undefined, deadline: number): Promise<string> {
-  const signal = callSignal(deadline, Infinity);
+async function groq(prompt: string, image: Image | undefined, deadline: number, cancel: AbortSignal): Promise<string> {
+  const signal = callSignal(deadline, cancel);
   const content = image
     ? [
         { type: "text", text: prompt },
@@ -244,64 +230,105 @@ const COOLDOWN_MS = 2 * 60 * 1000;
 const downUntil = new Map<string, number>();
 const isCoolingDown = (name: string) => (downUntil.get(name) ?? 0) > Date.now();
 
-type Call = (prompt: string, image: Image | undefined, deadline: number) => Promise<string>;
+type Call = (prompt: string, image: Image | undefined, deadline: number, cancel: AbortSignal) => Promise<string>;
+type Provider = { name: string; primary: boolean; call: Call; startAt: number; retry?: boolean };
 
-async function runChain(prompt: string, image?: Image): Promise<ChainResult> {
-  const deadline = Date.now() + CHAIN_BUDGET_MS;
-  const geminiKey = process.env.GEMINI_API_KEY;
-  // Reading the photo needs the strong model; the text-only explanation step uses a
-  // lighter one, which has higher free-tier limits and saves the main model's quota.
-  const firstModel = image ? geminiModel() : geminiTextModel();
-  const all: { name: string; key: string | undefined; primary: boolean; call: Call }[] = [
-    {
-      name: firstModel,
-      key: geminiKey,
-      primary: true,
-      call: (p, i, d) => geminiWithRetry(firstModel, p, i, d, PRIMARY_TIMEOUT_MS),
-    },
-    // Not retried: if this one is down too, move on to Groq quickly.
-    {
-      name: geminiBackupModel(),
-      key: geminiBackupModel() ? geminiKey : undefined,
-      primary: true,
-      call: (p, i, d) => gemini(geminiBackupModel(), p, i, d, BACKUP_TIMEOUT_MS),
-    },
-    { name: "groq", key: process.env.GROQ_API_KEY, primary: false, call: groq },
-  ];
-  const providers = all.filter((p) => p.key);
-  if (providers.length === 0) throw new AiError("no_keys", "No AI API keys are configured");
+/** One provider, start to finish: call, parse (asking again once if the JSON is broken), normalise. */
+async function attempt(p: Provider, prompt: string, image: Image | undefined, deadline: number, cancel: AbortSignal) {
+  let raw: unknown;
+  try {
+    raw = parseJson(await p.call(prompt, image, deadline, cancel));
+  } catch (e) {
+    if (!(e instanceof SyntaxError)) throw e;
+    console.warn(`[tatva] ${p.name} returned malformed JSON, asking again`);
+    raw = parseJson(await p.call(prompt, image, deadline, cancel));
+  }
+  const { result, legible } = normalizeResult(raw);
+  return { result: { ...result, provider: p.name }, legible, primary: p.primary } satisfies ChainResult;
+}
 
-  // Healthy providers first, in order; ones cooling down are kept as a last resort.
-  const ordered = [...providers.filter((p) => !isCoolingDown(p.name)), ...providers.filter((p) => isCoolingDown(p.name))];
-
-  // Models occasionally emit slightly broken JSON; one fresh attempt usually fixes it.
-  const callForJson = async (call: Call) => {
-    try {
-      return parseJson(await call(prompt, image, deadline));
-    } catch (e) {
-      if (!(e instanceof SyntaxError)) throw e;
-      console.warn("[tatva] malformed JSON, asking the same model again");
-      return parseJson(await call(prompt, image, deadline));
-    }
-  };
-
-  let busy = false;
-  for (const [i, p] of ordered.entries()) {
-    try {
-      const { result, legible } = normalizeResult(await callForJson(p.call));
-      downUntil.delete(p.name);
-      return { result: { ...result, provider: p.name }, legible, primary: p.primary };
-    } catch (e) {
-      const status = e instanceof ProviderError ? e.status : 0;
-      const timedOut = e instanceof Error && e.name === "TimeoutError";
-      // Timeouts are overload too, so the user is told to retry shortly rather than "something went wrong".
-      if (timedOut || status === 429 || status === 503 || status === 504) busy = true;
-      if (timedOut || status === 429 || status === 503) downUntil.set(p.name, Date.now() + COOLDOWN_MS);
-      const next = i < ordered.length - 1 ? "falling back" : "no providers left";
-      console.warn(`[tatva] ${p.name} failed (${next}):`, e instanceof Error ? e.message : e);
+function providerList(): Provider[] {
+  const list: Provider[] = [];
+  if (process.env.GEMINI_API_KEY) {
+    // Healthy models first; ones cooling down after a failure are kept as a last resort.
+    const models = geminiModels();
+    const ordered = [...models.filter((m) => !isCoolingDown(m)), ...models.filter(isCoolingDown)];
+    ordered.forEach((m, i) =>
+      list.push({ name: m, primary: true, startAt: i * STAGGER_MS, call: (p, img, d, c) => gemini(m, p, img, d, c) }),
+    );
+    const backup = geminiBackupModel();
+    if (backup && !models.includes(backup)) {
+      list.push({ name: backup, primary: false, startAt: BACKUP_START_MS, call: (p, img, d, c) => gemini(backup, p, img, d, c) });
     }
   }
-  throw new AiError(busy ? "busy" : "failed", "All AI providers failed");
+  if (process.env.GROQ_API_KEY) list.push({ name: "groq", primary: false, startAt: GROQ_START_MS, call: groq });
+  return list;
+}
+
+function runChain(prompt: string, image?: Image): Promise<ChainResult> {
+  const queue = providerList();
+  if (queue.length === 0) return Promise.reject(new AiError("no_keys", "No AI API keys are configured"));
+
+  const t0 = Date.now();
+  const deadline = t0 + CHAIN_BUDGET_MS;
+  const cancel = new AbortController();
+  let running = 0;
+  let busy = false;
+  let done = false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  return new Promise<ChainResult>((resolve, reject) => {
+    const finish = (settle: () => void) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cancel.abort(); // stop the models still working
+      settle();
+    };
+
+    const launch = (p: Provider) => {
+      running++;
+      attempt(p, prompt, image, deadline, cancel.signal).then(
+        (out) => {
+          downUntil.delete(p.name);
+          finish(() => resolve(out));
+        },
+        (e) => {
+          running--;
+          if (done) return;
+          const status = e instanceof ProviderError ? e.status : 0;
+          const timedOut = e instanceof Error && e.name === "TimeoutError";
+          const overloaded = status === 429 || status === 503;
+          // Timeouts are overload too, so the user is told to retry shortly rather than "something went wrong".
+          if (timedOut || overloaded || status === 504) busy = true;
+          if (timedOut || overloaded) downUntil.set(p.name, Date.now() + COOLDOWN_MS);
+          if (overloaded && !p.retry) {
+            queue.push({ ...p, retry: true, startAt: Date.now() - t0 + BUSY_RETRY_MS });
+            queue.sort((a, b) => a.startAt - b.startAt);
+          }
+          console.warn(`[tatva] ${p.name} failed:`, e instanceof Error ? e.message : e);
+          pump();
+        },
+      );
+    };
+
+    // Start every provider whose time has come; if nothing is running, don't wait for the next slot.
+    const pump = () => {
+      clearTimeout(timer);
+      if (done) return;
+      const elapsed = Date.now() - t0;
+      while (queue.length > 0 && (queue[0].startAt <= elapsed || (running === 0 && !queue[0].retry))) {
+        launch(queue.shift()!);
+      }
+      if (queue.length > 0) {
+        timer = setTimeout(pump, Math.max(0, queue[0].startAt - elapsed));
+      } else if (running === 0) {
+        finish(() => reject(new AiError(busy ? "busy" : "failed", "All AI providers failed")));
+      }
+    };
+
+    pump();
+  });
 }
 
 /** Step 1: read the medicines off the photo. */

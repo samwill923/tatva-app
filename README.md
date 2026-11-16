@@ -29,8 +29,8 @@ Confirm screen  ◄── meanwhile POST /api/insights (step 2: explain, text on
    ▼                               (asked again if the user edited anything)
 Dashboard
 
-Each step: Gemini (GEMINI_MODEL, retried twice if busy)
-        → Gemini backup (GEMINI_FALLBACK_MODEL) → Groq (GROQ_MODEL) as last resort
+Each step: Gemini models raced with an 8 s stagger (GEMINI_MODELS; first good answer wins)
+        → lighter backup at 36 s (GEMINI_BACKUP_MODEL) → Groq (GROQ_MODEL) at 44 s
 ```
 
 - **"Written as".** For every medicine the AI first copies the line exactly as it appears on the paper, and the confirm screen shows it under the name. If the AI decoded it into a different medicine, you can see the mismatch.
@@ -54,9 +54,9 @@ Open `.env` in the project root and paste in your keys:
 | Variable | Required | Description |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | One of the two | Free key from [Google AI Studio](https://aistudio.google.com/apikey) |
-| `GEMINI_MODEL` | No | Gemini model that reads the photo. Default `gemini-3.6-flash` (3.8 Flash was often overloaded) |
-| `GEMINI_FALLBACK_MODEL` | No | Second Gemini model tried before Groq. Default `gemini-3.5-flash`; set it empty to skip |
-| `GEMINI_TEXT_MODEL` | No | Lighter model for the text-only explanation step. Default `gemini-3.5-flash-lite` (higher free limits) |
+| `GEMINI_MODELS` | No | Comma-separated main models, in order, for both steps. Default `gemini-3.6-flash,gemini-3-flash-preview,gemini-2.5-flash`. If nothing has answered after 8 s the next one is also asked; a "busy" reply hands over at once |
+| `GEMINI_MODEL` | No | Just the first main model (the defaults follow it). Ignored when `GEMINI_MODELS` is set |
+| `GEMINI_BACKUP_MODEL` | No | Faster, less detailed model that joins at 36 s; its readings show the backup banner. Default `gemini-3.5-flash-lite`; set it empty to skip |
 | `GROQ_API_KEY` | One of the two | Free key from [console.groq.com](https://console.groq.com/keys) |
 | `GROQ_MODEL` | No | Groq vision model id. Default `qwen/qwen3.8-27b` |
 | `GROQ_TEXT_MODEL` | No | Groq model for the text-only explanation step. Defaults to `GROQ_MODEL` |
@@ -76,13 +76,13 @@ Open http://localhost:3000.
 
 **Testing on your phone:** connect the phone to the same Wi-Fi, run `npm run dev`, and open `http://<your-laptop-ip>:3000` on the phone. The camera button works there. (The browser-side result cache needs HTTPS or localhost, so over plain LAN it's skipped; the server cache still works.)
 
-Server logs show which provider answered and why a fallback happened (`[tatva] gemini failed (falling back): …`).
+Server logs show which provider answered and why a fallback happened (`[tatva] gemini-3.6-flash failed: …`).
 
 ## Deploy to Vercel
 
 1. Push the project to a GitHub repo.
 2. On [vercel.com](https://vercel.com), choose **Add New → Project** and import the repo (framework is detected as Next.js).
-3. Under **Environment Variables**, add `GEMINI_API_KEY`, `GROQ_API_KEY` and optionally `GEMINI_MODEL` / `GROQ_MODEL`.
+3. Under **Environment Variables**, add `GEMINI_API_KEY`, `GROQ_API_KEY` and optionally `GEMINI_MODELS` / `GROQ_MODEL`.
 4. Click **Deploy**.
 
 Or with the CLI:
